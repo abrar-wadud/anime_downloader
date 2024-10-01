@@ -5,8 +5,7 @@ from tqdm import tqdm
 import os
 from rich import print
 from rich import box
-from rich.prompt import Prompt
-from rich.prompt import IntPrompt
+from rich.prompt import Prompt, Confirm, IntPrompt
 from rich.table import Table
 from rich.progress import track
 
@@ -15,6 +14,7 @@ captcha_v3 = "03AFcWeA5Phyls8xv9gUYojSUiGR6tmA6CHcpFLjGx3WWSh7DZOnYTlP78j0QwLR7l
 
 def choosing_anime():
     global selected_title
+    global video_path
     anime_search = Prompt.ask("[cyan bold]Anime[/cyan bold]")
 
     anime_links = []
@@ -51,6 +51,9 @@ def choosing_anime():
         print(table)
         choose_anime = IntPrompt.ask("[cyan bold]Choose an anime[/cyan bold]") - 1
         selected_title = anime_titles[choose_anime]
+        video_path = os.path.expanduser(f"~/Anime/{selected_title}")
+        if not os.path.exists(video_path):
+            os.makedirs(video_path, exist_ok=True)
         max_ep(anime_links[choose_anime])
     else:
         print("[red bold]There's no anime, Try again...[/red bold]")
@@ -94,7 +97,7 @@ def get_res(id_list, ep_start, ep_end):
     low_res_dict = {}
     mid_res_dict = {}
     high_res_dict = {}
-    counter = ep_start - 1
+    counter = ep_start
     for i in track(id_list, "[cyan bold]Getting Links...[/cyan bold]", transient=True):
         data = {
             "captcha_v3": f"{captcha_v3}",
@@ -109,7 +112,6 @@ def get_res(id_list, ep_start, ep_end):
             resolution = f"{j.a.string}".replace(" ", "").replace("\n"," ")
             res_link = j.a.get('href')
             if res_link:
-                counter += 1
                 match resolution:
                     case "Download (360P-mp4)":
                         low_res_dict[f"EP.{counter}"] = f"{res_link}"
@@ -117,6 +119,8 @@ def get_res(id_list, ep_start, ep_end):
                         mid_res_dict[f"EP.{counter}"] = f"{res_link}"
                     case "Download (720P-mp4)":
                         high_res_dict[f"EP.{counter}"] = f"{res_link}"
+                counter += 1
+                
     pick_res(low_res_dict, mid_res_dict, high_res_dict, ep_start, ep_end)
 
 def download_file(url, filename):
@@ -132,18 +136,24 @@ def download_file(url, filename):
         # Set the chunk size for the download
         chunk_size = 8192
         
-        modified_filename = filename.removeprefix(f"/home/tawsif/Videos/{selected_title}/")
+        m_filename = filename.removeprefix(f"{video_path}/")
         # Open the file for writing in binary mode
         with open(f"{filename}.mp4", 'wb') as f:
             # Initialize tqdm progress bar with the total file size and chunk size
-            with tqdm(total=total_size, unit='B', unit_scale=True, desc=f"{modified_filename}.mp4") as pbar:
+            with tqdm(total=total_size, unit='B', unit_scale=True, desc=f"{m_filename}.mp4") as pbar:
                 # Write the file in chunks and update the progress bar
                 for chunk in r.iter_content(chunk_size=chunk_size):
                     if chunk:
                         f.write(chunk)
                         pbar.update(len(chunk))
     
-    print(f"[green bold]Downloaded {modified_filename}.mp4[/green bold]")
+    if os.path.getsize(f"{filename}.mp4") == total_size:
+        print(f"[green bold]Downloaded {m_filename}.mp4[/green bold]")
+    else:
+        print(f"[red bold] An error happend, Please try again[/red bold]")
+        confirm = Confirm.ask("[red bold]Want to delete the corrupt file?[/red bold]")
+        assert confirm
+        os.remove(f"{filename}.mp4")
 
 def pick_res(low_res, mid_res, high_res, ep_start, ep_end):
     ep_range = int(ep_end) - int(ep_start) + 1
@@ -161,39 +171,21 @@ def pick_res(low_res, mid_res, high_res, ep_start, ep_end):
         print("[red bold]No common resolution is available, Lower the episode range.[/red bold]")
     
     print(table)
-    if os.path.exists(f'/home/tawsif/Videos/{selected_title}'):
-        if len(low_res) == ep_range or len(mid_res) == ep_range or len(high_res) == ep_range:
-            choosing_res = Prompt.ask('[cyan bold]Choose resolution: [/cyan bold]', choices=['1','2','3'])
-            match choosing_res:
-                case '1':
-                    for link, num in zip(low_res.values(), range(ep_start, ep_end + 1)):
-                        download_file(link, f"/home/tawsif/Videos/{selected_title}/EP.{num}.360P")
-                        time.sleep(1)
-                case '2':
-                    for link, num in zip(mid_res.values(), range(ep_start, ep_end + 1)):
-                        download_file(link, f"/home/tawsif/Videos/{selected_title}/EP.{num}.480P")
-                        time.sleep(1)
-                case '3':
-                    for link, num in zip(high_res.values(), range(ep_start, ep_end + 1)):
-                        download_file(link, f"/home/tawsif/Videos/{selected_title}/EP.{num}.720P")
-                        time.sleep(1)
-    else:
-        os.mkdir(f"/home/tawsif/Videos/{selected_title}")
-        if len(low_res) == ep_range or len(mid_res) == ep_range or len(high_res) == ep_range:
-            choosing_res = Prompt.ask('[cyan bold]Choose resolution: [/cyan bold]', choices=['1','2','3'])
-            match choosing_res:
-                case '1':
-                    for link, num in zip(low_res.values(), range(ep_start, ep_end + 1)):
-                        download_file(link, f"/home/tawsif/Videos/{selected_title}/EP.{num}.360P")
-                        time.sleep(1)
-                case '2':
-                    for link, num in zip(mid_res.values(), range(ep_start, ep_end + 1)):
-                        download_file(link, f"/home/tawsif/Videos/{selected_title}/EP.{num}.480P")
-                        time.sleep(1)
-                case '3':
-                    for link, num in zip(high_res.values(), range(ep_start, ep_end + 1)):
-                        download_file(link, f"/home/tawsif/Videos/{selected_title}/EP.{num}.720P")
-                        time.sleep(1)
+    if len(low_res) == ep_range or len(mid_res) == ep_range or len(high_res) == ep_range:
+        choosing_res = Prompt.ask('[cyan bold]Choose resolution[/cyan bold]', choices=['1','2','3'])
+        match choosing_res:
+            case '1':
+                for link, num in zip(low_res.values(), range(ep_start, ep_end + 1)):
+                    download_file(link, f"{video_path}/EP.{num}.360P")
+                    time.sleep(1)
+            case '2':
+                for link, num in zip(mid_res.values(), range(ep_start, ep_end + 1)):
+                    download_file(link, f"{video_path}/EP.{num}.480P")
+                    time.sleep(1)
+            case '3':
+                for link, num in zip(high_res.values(), range(ep_start, ep_end + 1)):
+                    download_file(link, f"{video_path}/EP.{num}.720P")
+                    time.sleep(1)
 
 if __name__ == "__main__":
     choosing_anime()
