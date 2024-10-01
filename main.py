@@ -1,8 +1,9 @@
 import requests
-from bs4 import BeautifulSoup
+import warnings
 import time
-from tqdm import tqdm
 import os
+from bs4 import BeautifulSoup
+from tqdm.rich import tqdm_rich
 from rich import print
 from rich import box
 from rich.prompt import Prompt, Confirm, IntPrompt
@@ -15,12 +16,12 @@ captcha_v3 = "03AFcWeA5Phyls8xv9gUYojSUiGR6tmA6CHcpFLjGx3WWSh7DZOnYTlP78j0QwLR7l
 def choosing_anime():
     global selected_title
     global video_path
-    anime_search = Prompt.ask("[cyan bold]Anime[/cyan bold]")
+    anime_search = Prompt.ask("[cyan]Search[/cyan]")
 
     anime_links = []
     anime_titles = []
-    table = Table(box=box.ROUNDED)
-    table.add_column("[blue_violet]No[/blue_violet]",style="blue_violet bold", justify="center")
+    table = Table(box=box.DOUBLE)
+    table.add_column("[grey37]No[/grey37]",style="grey37 bold", justify="center")
     table.add_column("[yellow]Anime Name[/yellow]", style="yellow")
     table.add_column("[green]Released[/green]", style="green", justify="center")
 
@@ -31,9 +32,9 @@ def choosing_anime():
         page_list = soup.find('ul', class_='pagination-list').find_all('li')
     except AttributeError:
         page_list = [1]
-    
+
     anime_counter = 0
-    for i in track(range(1, len(page_list)+1), "[dark_green]Searching...[/dark_green]", transient=True):
+    for i in track(range(1, len(page_list)+1), "[purple4 italic]Searching...[/purple4 italic]", transient=True):
         search_result = requests.get(f"https://anitaku.pe/search.html?keyword={anime_search}&page={i}")
         soup = BeautifulSoup(search_result.content, 'html.parser')
         search_items = soup.find('ul', class_="items").find_all('p')
@@ -44,12 +45,12 @@ def choosing_anime():
             title = item.a.string
             anime_titles.append(title)
             rel_date = date.text.strip()
-            anime_counter += 1  
+            anime_counter += 1
             table.add_row(str(anime_counter), title, rel_date.removeprefix("Released: "))
 
     if len(anime_links) > 0:
         print(table)
-        choose_anime = IntPrompt.ask("[cyan bold]Choose an anime[/cyan bold]") - 1
+        choose_anime = IntPrompt.ask("[cyan]Pick Anime[/cyan]") - 1
         selected_title = anime_titles[choose_anime]
         video_path = os.path.expanduser(f"~/Anime/{selected_title}")
         if not os.path.exists(video_path):
@@ -65,15 +66,15 @@ def max_ep(choosed_anime):
 
     episodes = anime_soup.find('ul', id='episode_page').find_all('a')
     ep_end = episodes[-1].get('ep_end')
-    print(f"[green bold]{ep_end} {'episode' if ep_end == '1' else 'episodes'} available[green bold]")
+    print(f"[bright_white]{ep_end} {'episode' if ep_end == '1' else 'episodes'} available[/bright_white]")
     download_id(anime_soup, ep_end)
 
 def download_id(anime_soup, ep_end):
     anime_id = anime_soup.find('input', id="movie_id").get('value')
-    
-    starting_ep = IntPrompt.ask("[cyan bold]Starting episode[/cyan bold]") if ep_end != '1' else 1
-    ending_ep = IntPrompt.ask("[cyan bold]Ending episode[/cyan bold]") if ep_end != '1' else 1
-    
+
+    starting_ep = IntPrompt.ask("[cyan]Starting episode[/cyan]") if ep_end != '1' else 1
+    ending_ep = IntPrompt.ask("[cyan]Ending episode[/cyan]") if ep_end != '1' else 1
+
     if starting_ep <= ending_ep:
         eps_links_page = requests.get(f"https://ajax.gogocdn.net/ajax/load-list-episode?ep_start={starting_ep}&ep_end={ending_ep}&id={anime_id}")
     else:
@@ -84,7 +85,7 @@ def download_id(anime_soup, ep_end):
     ep_links = eps_soup.find_all('a')
     ep_links.reverse()
     id_list = []
-    for i in track(ep_links, "[cyan bold]Processing...[/cyan bold]", transient=True):
+    for i in track(ep_links, "[purple4 italic]Processing...[/purple4 italic]", transient=True):
         ep_page = requests.get(f"{base_url}{i.get('href').strip()}")
         ep_soup = BeautifulSoup(ep_page.content, 'html.parser')
         download_link = ep_soup.find('li', class_="dowloads").a.get('href')
@@ -98,7 +99,7 @@ def get_res(id_list, ep_start, ep_end):
     mid_res_dict = {}
     high_res_dict = {}
     counter = ep_start
-    for i in track(id_list, "[cyan bold]Getting Links...[/cyan bold]", transient=True):
+    for i in track(id_list, "[purple4 italic]Getting Links...[/purple4 italic]", transient=True):
         data = {
             "captcha_v3": f"{captcha_v3}",
             "id": f"{i}"
@@ -120,14 +121,15 @@ def get_res(id_list, ep_start, ep_end):
                     case "Download (720P-mp4)":
                         high_res_dict[f"EP.{counter}"] = f"{res_link}"
                 counter += 1
-                
+
     pick_res(low_res_dict, mid_res_dict, high_res_dict, ep_start, ep_end)
 
 def download_file(url, filename):
+    warnings.filterwarnings("ignore",lineno=0, append=True)
     headers = {
         "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:91.0) Gecko/20100101 Firefox/91.0"
     }
-    
+
     # Send a GET request with streaming enabled to download in chunks
     with requests.get(url, headers=headers, stream=True) as r:
         r.raise_for_status()
@@ -135,18 +137,18 @@ def download_file(url, filename):
         total_size = int(r.headers.get('Content-Length', 0))
         # Set the chunk size for the download
         chunk_size = 8192
-        
+
         m_filename = filename.removeprefix(f"{video_path}/")
         # Open the file for writing in binary mode
         with open(f"{filename}.mp4", 'wb') as f:
             # Initialize tqdm progress bar with the total file size and chunk size
-            with tqdm(total=total_size, unit='B', unit_scale=True, desc=f"{m_filename}.mp4") as pbar:
+            with tqdm_rich(total=total_size, unit='B', unit_scale=True, desc=f"[orange_red1]{m_filename}.mp4[/orange_red1]", dynamic_ncols=True) as pbar:
                 # Write the file in chunks and update the progress bar
                 for chunk in r.iter_content(chunk_size=chunk_size):
                     if chunk:
                         f.write(chunk)
                         pbar.update(len(chunk))
-    
+
     if os.path.getsize(f"{filename}.mp4") == total_size:
         print(f"[green bold]Downloaded {m_filename}.mp4[/green bold]")
     else:
@@ -157,9 +159,9 @@ def download_file(url, filename):
 
 def pick_res(low_res, mid_res, high_res, ep_start, ep_end):
     ep_range = int(ep_end) - int(ep_start) + 1
-    
-    table = Table(box=box.ROUNDED)
-    table.add_column("[blue_violet]No[/blue_violet]",style="blue_violet bold", justify="right")
+
+    table = Table(box=box.DOUBLE)
+    table.add_column("[grey37]No[/grey37]",style="grey37 bold", justify="right")
     table.add_column("[yellow]Resolutions[/yellow]", style="yellow bold", justify="center")
     if len(low_res) == ep_range:
         table.add_row("1","[yellow]360P[/yellow]")
@@ -169,10 +171,10 @@ def pick_res(low_res, mid_res, high_res, ep_start, ep_end):
         table.add_row("3","[yellow]720P[/yellow]")
     if len(low_res) < ep_range and len(mid_res) < ep_range and len(high_res) < ep_range:
         print("[red bold]No common resolution is available, Lower the episode range.[/red bold]")
-    
+
     print(table)
     if len(low_res) == ep_range or len(mid_res) == ep_range or len(high_res) == ep_range:
-        choosing_res = Prompt.ask('[cyan bold]Choose resolution[/cyan bold]', choices=['1','2','3'])
+        choosing_res = Prompt.ask('[cyan]Choose resolution[/cyan]')
         match choosing_res:
             case '1':
                 for link, num in zip(low_res.values(), range(ep_start, ep_end + 1)):
