@@ -21,11 +21,11 @@ def choosing_anime():
     anime_links = []
     anime_titles = []
     table = Table(box=box.DOUBLE)
-    table.add_column("[grey37]No[/grey37]",style="grey37 bold", justify="center")
+    table.add_column("[grey37]No[/grey37]",style="grey37 bold", justify="right")
     table.add_column("[yellow]Anime Name[/yellow]", style="yellow")
     table.add_column("[green]Released[/green]", style="green", justify="center")
 
-    search_result = requests.get(f"https://anitaku.pe/search.html?keyword={anime_search}&page=1")
+    search_result = requests.get(f"{base_url}/search.html?keyword={anime_search}&page=1")
     soup = BeautifulSoup(search_result.content, 'html.parser')
 
     try:
@@ -33,20 +33,18 @@ def choosing_anime():
     except AttributeError:
         page_list = [1]
 
-    anime_counter = 0
     for i in track(range(1, len(page_list)+1), "[purple4 italic]Searching...[/purple4 italic]", transient=True):
-        search_result = requests.get(f"https://anitaku.pe/search.html?keyword={anime_search}&page={i}")
+        search_result = requests.get(f"{base_url}/search.html?keyword={anime_search}&page={i}")
         soup = BeautifulSoup(search_result.content, 'html.parser')
         search_items = soup.find('ul', class_="items").find_all('p')
 
-        for item,date in zip(search_items[::2], search_items[1::2]):
-            link = f"{base_url}{item.a.get('href')}"
+        for item,date in zip(enumerate(search_items[::2], start=1), search_items[1::2]):
+            link = f"{base_url}{item[1].a.get('href')}"
             anime_links.append(link)
-            title = item.a.string
+            title = item[1].a.string
             anime_titles.append(title)
             rel_date = date.text.strip()
-            anime_counter += 1
-            table.add_row(str(anime_counter), title, rel_date.removeprefix("Released: "))
+            table.add_row(str(item[0]), title, rel_date.removeprefix("Released: "))
 
     if len(anime_links) > 0:
         print(table)
@@ -153,9 +151,6 @@ def download_file(url, filename):
         print(f"[green bold]Downloaded {m_filename}.mp4[/green bold]")
     else:
         print(f"[red bold] An error happend, Please try again[/red bold]")
-        confirm = Confirm.ask("[red bold]Want to delete the corrupt file?[/red bold]")
-        assert confirm
-        os.remove(f"{filename}.mp4")
 
 def pick_res(low_res, mid_res, high_res, ep_start, ep_end):
     ep_range = int(ep_end) - int(ep_start) + 1
@@ -171,6 +166,7 @@ def pick_res(low_res, mid_res, high_res, ep_start, ep_end):
         table.add_row("3","[yellow]720P[/yellow]")
     if len(low_res) < ep_range and len(mid_res) < ep_range and len(high_res) < ep_range:
         print("[red bold]No common resolution is available, Lower the episode range.[/red bold]")
+        return
 
     print(table)
     if len(low_res) == ep_range or len(mid_res) == ep_range or len(high_res) == ep_range:
