@@ -6,7 +6,7 @@ from bs4 import BeautifulSoup
 from tqdm.rich import tqdm_rich
 from rich import print
 from rich import box
-from rich.prompt import Prompt, Confirm, IntPrompt
+from rich.prompt import Prompt, IntPrompt
 from rich.table import Table
 from rich.progress import track
 
@@ -96,6 +96,7 @@ def get_res(id_list, ep_start, ep_end):
     low_res_dict = {}
     mid_res_dict = {}
     high_res_dict = {}
+    extreame_res_dict = {}
     counter = ep_start
     for i in track(id_list, "[purple4 italic]Getting Links...[/purple4 italic]", transient=True):
         data = {
@@ -118,9 +119,11 @@ def get_res(id_list, ep_start, ep_end):
                         mid_res_dict[f"EP.{counter}"] = f"{res_link}"
                     case "Download (720P-mp4)":
                         high_res_dict[f"EP.{counter}"] = f"{res_link}"
+                    case "Download (1080P-mp4)":
+                        extreame_res_dict[f"EP.{counter}"] = f"{res_link}"
                 counter += 1
 
-    pick_res(low_res_dict, mid_res_dict, high_res_dict, ep_start, ep_end)
+    pick_res(low_res_dict, mid_res_dict, high_res_dict, extreame_res_dict, ep_start, ep_end)
 
 def download_file(url, filename):
     warnings.filterwarnings("ignore",lineno=0, append=True)
@@ -147,12 +150,8 @@ def download_file(url, filename):
                         f.write(chunk)
                         pbar.update(len(chunk))
 
-    if os.path.getsize(f"{filename}.mp4") == total_size:
-        print(f"[green bold]Downloaded {m_filename}.mp4[/green bold]")
-    else:
-        print(f"[red bold] An error happend, Please try again[/red bold]")
 
-def pick_res(low_res, mid_res, high_res, ep_start, ep_end):
+def pick_res(low_res, mid_res, high_res, extreame_res, ep_start, ep_end):
     ep_range = int(ep_end) - int(ep_start) + 1
 
     table = Table(box=box.DOUBLE)
@@ -164,12 +163,14 @@ def pick_res(low_res, mid_res, high_res, ep_start, ep_end):
         table.add_row("2","[yellow]480P[/yellow]")
     if len(high_res) == ep_range:
         table.add_row("3","[yellow]720P[/yellow]")
-    if len(low_res) < ep_range and len(mid_res) < ep_range and len(high_res) < ep_range:
+    if len(extreame_res) == ep_range:
+        table.add_row("4","[yellow]1080P[/yellow]")
+    if len(low_res) < ep_range and len(mid_res) < ep_range and len(high_res) < ep_range and len(extreame_res) < ep_range:
         print("[red bold]No common resolution is available, Lower the episode range.[/red bold]")
         return
-
-    print(table)
-    if len(low_res) == ep_range or len(mid_res) == ep_range or len(high_res) == ep_range:
+    else:
+        print(table)
+    if len(low_res) == ep_range or len(mid_res) == ep_range or len(high_res) == ep_range or len(extreame_res) == ep_range:
         choosing_res = Prompt.ask('[cyan]Choose resolution[/cyan]')
         match choosing_res:
             case '1':
@@ -183,6 +184,10 @@ def pick_res(low_res, mid_res, high_res, ep_start, ep_end):
             case '3':
                 for link, num in zip(high_res.values(), range(ep_start, ep_end + 1)):
                     download_file(link, f"{video_path}/EP.{num}.720P")
+                    time.sleep(1)
+            case '4':
+                for link, num in zip(extreame_res.values(), range(ep_start, ep_end + 1)):
+                    download_file(link, f"{video_path}/EP.{num}.1080P")
                     time.sleep(1)
 
 if __name__ == "__main__":
