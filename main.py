@@ -2,6 +2,7 @@ import requests
 import warnings
 import time
 import os
+import re
 from bs4 import BeautifulSoup
 from tqdm.rich import tqdm_rich
 from rich import print
@@ -33,24 +34,27 @@ def choosing_anime():
     except AttributeError:
         page_list = [1]
 
+    anime_counter = 0
     for i in track(range(1, len(page_list)+1), "[purple4 italic]Searching...[/purple4 italic]", transient=True):
         search_result = requests.get(f"{base_url}/search.html?keyword={anime_search}&page={i}")
         soup = BeautifulSoup(search_result.content, 'html.parser')
         search_items = soup.find('ul', class_="items").find_all('p')
 
-        for item,date in zip(enumerate(search_items[::2], start=1), search_items[1::2]):
-            link = f"{base_url}{item[1].a.get('href')}"
+        for item,date in zip(search_items[::2], search_items[1::2]):
+            link = f"{base_url}{item.a.get('href')}"
             anime_links.append(link)
-            title = item[1].a.string
+            title = item.a.string
             anime_titles.append(title)
             rel_date = date.text.strip()
-            table.add_row(str(item[0]), title, rel_date.removeprefix("Released: "))
+            anime_counter += 1
+            table.add_row(str(anime_counter), title, rel_date.removeprefix("Released: "))
 
     if len(anime_links) > 0:
         print(table)
         choose_anime = IntPrompt.ask("[cyan]Pick Anime[/cyan]") - 1
         selected_title = anime_titles[choose_anime]
-        video_path = os.path.expanduser(f"~/Anime/{selected_title}")
+        sanitized_name = re.sub(r'[\\/*?:"<>|]', "", selected_title)
+        video_path = os.path.expanduser(f"~/Anime/{sanitized_name}")
         if not os.path.exists(video_path):
             os.makedirs(video_path, exist_ok=True)
         max_ep(anime_links[choose_anime])
@@ -149,7 +153,6 @@ def download_file(url, filename):
                     if chunk:
                         f.write(chunk)
                         pbar.update(len(chunk))
-
 
 def pick_res(low_res, mid_res, high_res, extreame_res, ep_start, ep_end):
     ep_range = int(ep_end) - int(ep_start) + 1
