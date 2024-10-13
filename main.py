@@ -57,18 +57,18 @@ def choosing_anime():
         video_path = os.path.expanduser(f"~/Anime/{sanitized_name}")
         if not os.path.exists(video_path):
             os.makedirs(video_path, exist_ok=True)
-        max_ep(anime_links[choose_anime])
+        max_ep(anime_links[choose_anime], selected_title)
     else:
         print("[red bold]There's no anime, Try again...[/red bold]")
         return
 
-def max_ep(choosed_anime):
+def max_ep(choosed_anime, anime_title):
     anime_page = requests.get(choosed_anime)
     anime_soup = BeautifulSoup(anime_page.content, 'html.parser')
 
     episodes = anime_soup.find('ul', id='episode_page').find_all('a')
     ep_end = episodes[-1].get('ep_end')
-    print(f"[bright_white]{ep_end} {'episode' if ep_end == '1' else 'episodes'} available[/bright_white]")
+    print(f"[bright_white bold]{anime_title} ({ep_end})[/bright_white bold]")
     download_id(anime_soup, ep_end)
 
 def download_id(anime_soup, ep_end):
@@ -129,30 +129,32 @@ def get_res(id_list, ep_start, ep_end):
 
     pick_res(low_res_dict, mid_res_dict, high_res_dict, extreame_res_dict, ep_start, ep_end)
 
-def download_file(url, filename):
+def download_file(url, filename, retries=3, delay=2):
     warnings.filterwarnings("ignore",lineno=0, append=True)
     headers = {
         "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:91.0) Gecko/20100101 Firefox/91.0"
     }
 
-    # Send a GET request with streaming enabled to download in chunks
-    with requests.get(url, headers=headers, stream=True) as r:
-        r.raise_for_status()
-        # Get the total file size from headers
-        total_size = int(r.headers.get('Content-Length', 0))
-        # Set the chunk size for the download
-        chunk_size = 8192
+    for attempt in range(retries):
+        try:
+            with requests.get(url, headers=headers, stream=True) as r:
+                r.raise_for_status()
+                total_size = int(r.headers.get('Content-Length', 0))
+                chunk_size = 8192
 
-        m_filename = filename.removeprefix(f"{video_path}/")
-        # Open the file for writing in binary mode
-        with open(f"{filename}.mp4", 'wb') as f:
-            # Initialize tqdm progress bar with the total file size and chunk size
-            with tqdm_rich(total=total_size, unit='B', unit_scale=True, desc=f"[orange_red1]{m_filename}.mp4[/orange_red1]", dynamic_ncols=True) as pbar:
-                # Write the file in chunks and update the progress bar
-                for chunk in r.iter_content(chunk_size=chunk_size):
-                    if chunk:
-                        f.write(chunk)
-                        pbar.update(len(chunk))
+                m_filename = filename.removeprefix(f"{video_path}/")
+                with open(f"{filename}.mp4", 'wb') as f:
+                    with tqdm_rich(total=total_size, unit='B', unit_scale=True, desc=f"[orange_red1]{m_filename}.mp4[/orange_red1]", dynamic_ncols=True) as pbar:
+                        for chunk in r.iter_content(chunk_size=chunk_size):
+                            if chunk:
+                                f.write(chunk)
+                                pbar.update(len(chunk))
+            print(f"[bright_green bold]Download Completed {m_filename}[/bright_green bold]")
+            return
+        except requests.RequestException as e:
+            print(f"[red]Error downloading {m_filename}: {e}. Retrying... ({attempt+1}/{retries})[/red]")
+            time.sleep(delay)
+    print(f"[red bold]Failed to download {m_filename} after {retries} attempts[/red bold]")
 
 def pick_res(low_res, mid_res, high_res, extreame_res, ep_start, ep_end):
     ep_range = int(ep_end) - int(ep_start) + 1
