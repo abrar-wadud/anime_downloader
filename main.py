@@ -11,8 +11,8 @@ from rich.prompt import Prompt, IntPrompt
 from rich.table import Table
 from rich.progress import track
 
-base_url = "https://anitaku.pe"
-captcha_v3 = "03AFcWeA5Phyls8xv9gUYojSUiGR6tmA6CHcpFLjGx3WWSh7DZOnYTlP78j0QwLR7lfmGpmYFLgzCExJJnEMFy7jKwZdDFcf7s8Y9UXhaHsUvB95A6qCvTps_qcyPn6oieU2IoTymVwvQYcg7hK66ioEfzuvUlLUfGr8r47nnJzxe-geY6KfElW86yrcnjUVg2ChyJ0ROOYC2wz9K18DeLKqf7yt2w5VsCfLBqoqaIeiFInZ2U508MKsewFtnIRf6DarTfnRPdIa1gCmZwQixgfLIUd-rTaZZLI5Aaa33AnU18r-3x2qfp7MruJ5uB9k1SLgfD9R7pUz7si0UP67V6qPNjhdyS3UKQfoBC26KJbWHLGNZtKFPQw73AzSOqdugWdVjFJ3LQdDQHgqDE6iojJNq82-wBo2g9_sZpzI-9EBDzTYEBC-9UxZE-ZXA6TpxnLCX2YPj4ZKsWXYfMWATXHtmIxBLqpnzRoMHoKuajX8Kw15Sk7c2ih696PLJzeMsLXumVRjHJgambHD-CwOrwZnkDg5rjX8KikrfnFPTIzloFn1EeSdju6EEl4hXQDhWgtlarmKAh_iEvj4GNMBXjj8gXl_-84xSBXHHw3q6YyELh4o6TsS2y4tm3HdjdNWiMZCqMFgiWTdanUC8LFq6bjs8GlxTdmkWBjD46GtsL0TwgHCItF2Kge6lDULiJj2PEnbzMy7QiUWKPZGzpamMDA7iOfE9oA_JguOl-Pi5yQd_PYHGyhL-BWE7UN34cjKoPNERWO_0PxRO42UJj7zR8uUcwSznv9E2kNeiIXogQsIy3oxBckBBtPyDHXi5QQ5klg8oUVzRCD7Rg"
+BASE_URL = "https://anitaku.pe"
+CAPTCHA_V3 = "03AFcWeA5Phyls8xv9gUYojSUiGR6tmA6CHcpFLjGx3WWSh7DZOnYTlP78j0QwLR7lfmGpmYFLgzCExJJnEMFy7jKwZdDFcf7s8Y9UXhaHsUvB95A6qCvTps_qcyPn6oieU2IoTymVwvQYcg7hK66ioEfzuvUlLUfGr8r47nnJzxe-geY6KfElW86yrcnjUVg2ChyJ0ROOYC2wz9K18DeLKqf7yt2w5VsCfLBqoqaIeiFInZ2U508MKsewFtnIRf6DarTfnRPdIa1gCmZwQixgfLIUd-rTaZZLI5Aaa33AnU18r-3x2qfp7MruJ5uB9k1SLgfD9R7pUz7si0UP67V6qPNjhdyS3UKQfoBC26KJbWHLGNZtKFPQw73AzSOqdugWdVjFJ3LQdDQHgqDE6iojJNq82-wBo2g9_sZpzI-9EBDzTYEBC-9UxZE-ZXA6TpxnLCX2YPj4ZKsWXYfMWATXHtmIxBLqpnzRoMHoKuajX8Kw15Sk7c2ih696PLJzeMsLXumVRjHJgambHD-CwOrwZnkDg5rjX8KikrfnFPTIzloFn1EeSdju6EEl4hXQDhWgtlarmKAh_iEvj4GNMBXjj8gXl_-84xSBXHHw3q6YyELh4o6TsS2y4tm3HdjdNWiMZCqMFgiWTdanUC8LFq6bjs8GlxTdmkWBjD46GtsL0TwgHCItF2Kge6lDULiJj2PEnbzMy7QiUWKPZGzpamMDA7iOfE9oA_JguOl-Pi5yQd_PYHGyhL-BWE7UN34cjKoPNERWO_0PxRO42UJj7zR8uUcwSznv9E2kNeiIXogQsIy3oxBckBBtPyDHXi5QQ5klg8oUVzRCD7Rg"
 
 def choosing_anime():
     global selected_title
@@ -26,7 +26,7 @@ def choosing_anime():
     table.add_column("[yellow]Anime Name[/yellow]", style="yellow")
     table.add_column("[green]Released[/green]", style="green", justify="center")
 
-    search_result = requests.get(f"{base_url}/search.html?keyword={anime_search}&page=1")
+    search_result = requests.get(f"{BASE_URL}/search.html?keyword={anime_search}&page=1")
     soup = BeautifulSoup(search_result.content, 'html.parser')
 
     try:
@@ -36,12 +36,12 @@ def choosing_anime():
 
     anime_counter = 0
     for i in track(range(1, len(page_list)+1), "[purple4 italic]Searching...[/purple4 italic]", transient=True):
-        search_result = requests.get(f"{base_url}/search.html?keyword={anime_search}&page={i}")
+        search_result = requests.get(f"{BASE_URL}/search.html?keyword={anime_search}&page={i}")
         soup = BeautifulSoup(search_result.content, 'html.parser')
         search_items = soup.find('ul', class_="items").find_all('p')
 
         for item,date in zip(search_items[::2], search_items[1::2]):
-            link = f"{base_url}{item.a.get('href')}"
+            link = f"{BASE_URL}{item.a.get('href')}"
             anime_links.append(link)
             title = item.a.string
             anime_titles.append(title)
@@ -66,9 +66,9 @@ def max_ep(choosed_anime, anime_title):
     anime_page = requests.get(choosed_anime)
     anime_soup = BeautifulSoup(anime_page.content, 'html.parser')
 
-    episodes = anime_soup.find('ul', id='episode_page').find_all('a')
-    ep_end = episodes[-1].get('ep_end')
-    print(f"[bright_white bold]{anime_title} ({ep_end})[/bright_white bold]")
+    episodes = anime_soup.find('ul', id='episode_page').find_all('a')[-1]
+    ep_end = episodes.get('ep_end')
+    print(f"[bold]{anime_title} ({ep_end})[/bold]")
     download_id(anime_soup, ep_end)
 
 def download_id(anime_soup, ep_end):
@@ -88,12 +88,12 @@ def download_id(anime_soup, ep_end):
     ep_links.reverse()
     id_list = []
     for i in track(ep_links, "[purple4 italic]Processing...[/purple4 italic]", transient=True):
-        ep_page = requests.get(f"{base_url}{i.get('href').strip()}")
+        ep_page = requests.get(f"{BASE_URL}{i.get('href').strip()}")
         ep_soup = BeautifulSoup(ep_page.content, 'html.parser')
         download_link = ep_soup.find('li', class_="dowloads").a.get('href')
         id = download_link.split('id=')[1].split('&')[0]
         id_list.append(id)
-        time.sleep(0.5)
+        time.sleep(0.1)
     get_res(id_list, starting_ep, ending_ep)
 
 def get_res(id_list, ep_start, ep_end):
@@ -104,7 +104,7 @@ def get_res(id_list, ep_start, ep_end):
     counter = ep_start
     for i in track(id_list, "[purple4 italic]Getting Links...[/purple4 italic]", transient=True):
         data = {
-            "captcha_v3": f"{captcha_v3}",
+            "captcha_v3": f"{CAPTCHA_V3}",
             "id": f"{i}"
         }
         downloads = requests.post("https://s3taku.com/download", data=data)
@@ -129,32 +129,26 @@ def get_res(id_list, ep_start, ep_end):
 
     pick_res(low_res_dict, mid_res_dict, high_res_dict, extreame_res_dict, ep_start, ep_end)
 
-def download_file(url, filename, retries=3, delay=2):
+def download_file(url, filename):
     warnings.filterwarnings("ignore",lineno=0, append=True)
     headers = {
         "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:91.0) Gecko/20100101 Firefox/91.0"
     }
 
-    for attempt in range(retries):
-        try:
-            with requests.get(url, headers=headers, stream=True) as r:
-                r.raise_for_status()
-                total_size = int(r.headers.get('Content-Length', 0))
-                chunk_size = 8192
+    with requests.get(url, headers=headers, stream=True) as r:
+        r.raise_for_status()
+        total_size = int(r.headers.get('Content-Length', 0))
+        chunk_size = 8192
 
-                m_filename = filename.removeprefix(f"{video_path}/")
-                with open(f"{filename}.mp4", 'wb') as f:
-                    with tqdm_rich(total=total_size, unit='B', unit_scale=True, desc=f"[orange_red1]{m_filename}.mp4[/orange_red1]", dynamic_ncols=True) as pbar:
-                        for chunk in r.iter_content(chunk_size=chunk_size):
-                            if chunk:
-                                f.write(chunk)
-                                pbar.update(len(chunk))
-            print(f"[bright_green bold]Download Completed {m_filename}[/bright_green bold]")
-            return
-        except requests.RequestException as e:
-            print(f"[red]Error downloading {m_filename}: {e}. Retrying... ({attempt+1}/{retries})[/red]")
-            time.sleep(delay)
-    print(f"[red bold]Failed to download {m_filename} after {retries} attempts[/red bold]")
+        m_filename = filename.removeprefix(f"{video_path}/")
+        with open(f"{filename}.mp4", 'wb') as f:
+            with tqdm_rich(total=total_size, unit='B', unit_scale=True, desc=f"[orange_red1]{m_filename}.mp4[/orange_red1]", dynamic_ncols=True) as pbar:
+                for chunk in r.iter_content(chunk_size=chunk_size):
+                    if chunk:
+                        f.write(chunk)
+                        pbar.update(len(chunk))
+    print(f"[bright_green bold]Download Completed {m_filename} \n[/bright_green bold]")
+    return
 
 def pick_res(low_res, mid_res, high_res, extreame_res, ep_start, ep_end):
     ep_range = int(ep_end) - int(ep_start) + 1
