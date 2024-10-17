@@ -129,26 +129,38 @@ def get_res(id_list, ep_start, ep_end):
 
     pick_res(low_res_dict, mid_res_dict, high_res_dict, extreame_res_dict, ep_start, ep_end)
 
-def download_file(url, filename):
-    warnings.filterwarnings("ignore",lineno=0, append=True)
+def download_file(url, filename, max_retries=5):
+    warnings.filterwarnings("ignore", lineno=0, append=True)
     headers = {
         "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:91.0) Gecko/20100101 Firefox/91.0"
     }
 
-    with requests.get(url, headers=headers, stream=True) as r:
-        r.raise_for_status()
-        total_size = int(r.headers.get('Content-Length', 0))
-        chunk_size = 8192
+    retries = 0
 
-        m_filename = filename.removeprefix(f"{video_path}/")
-        with open(f"{filename}.mp4", 'wb') as f:
-            with tqdm_rich(total=total_size, unit='B', unit_scale=True, desc=f"[orange_red1]{m_filename}.mp4[/orange_red1]", dynamic_ncols=True) as pbar:
-                for chunk in r.iter_content(chunk_size=chunk_size):
-                    if chunk:
-                        f.write(chunk)
-                        pbar.update(len(chunk))
-    print(f"[bright_green bold]Download Completed {m_filename} \n[/bright_green bold]")
-    return
+    while retries < max_retries:
+        with requests.get(url, headers=headers, stream=True) as r:
+            r.raise_for_status()
+            total_size = int(r.headers.get('Content-Length', 0))
+            chunk_size = 8192
+
+            # If total_size is zero, increment retries and try again
+            if total_size == 0:
+                retries += 1
+                print(f"[yellow bold]Total size is zero. Retrying... ({retries}/{max_retries})[/yellow bold]")
+                continue
+
+            # If total_size is valid, proceed with the download
+            m_filename = filename.removeprefix(f"{video_path}/")
+            with open(f"{filename}.mp4", 'wb') as f:
+                with tqdm(total=total_size, unit='B', unit_scale=True, desc=f"[orange_red1]{m_filename}.mp4[/orange_red1]", dynamic_ncols=True) as pbar:
+                    for chunk in r.iter_content(chunk_size=chunk_size):
+                        if chunk:
+                            f.write(chunk)
+                            pbar.update(len(chunk))
+            print(f"[bright_green bold]Download Completed {m_filename} \n[/bright_green bold]")
+            return
+
+    print(f"[red bold]Failed to download {filename} after {max_retries} attempts. Exiting.[/red bold]")
 
 def pick_res(low_res, mid_res, high_res, extreame_res, ep_start, ep_end):
     ep_range = int(ep_end) - int(ep_start) + 1
