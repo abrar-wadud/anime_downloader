@@ -4,6 +4,7 @@ import time
 import os
 import re
 from bs4 import BeautifulSoup
+from tqdm import TqdmExperimentalWarning
 from tqdm.rich import tqdm_rich
 from rich import print
 from rich import box
@@ -21,6 +22,7 @@ def choosing_anime():
 
     anime_links = []
     anime_titles = []
+    anime_counter = 0
     table = Table(box=box.DOUBLE)
     table.add_column("[grey37]No[/grey37]",style="grey37 bold", justify="right")
     table.add_column("[yellow]Anime Name[/yellow]", style="yellow")
@@ -29,25 +31,16 @@ def choosing_anime():
     search_result = requests.get(f"{BASE_URL}/search.html?keyword={anime_search}&page=1")
     soup = BeautifulSoup(search_result.content, 'html.parser')
 
-    try:
-        page_list = soup.find('ul', class_='pagination-list').find_all('li')
-    except AttributeError:
-        page_list = [1]
+    search_items = soup.find('ul', class_="items").find_all('p')
 
-    anime_counter = 0
-    for i in track(range(1, len(page_list)+1), "[purple4 italic]Searching...[/purple4 italic]", transient=True):
-        search_result = requests.get(f"{BASE_URL}/search.html?keyword={anime_search}&page={i}")
-        soup = BeautifulSoup(search_result.content, 'html.parser')
-        search_items = soup.find('ul', class_="items").find_all('p')
-
-        for item,date in zip(search_items[::2], search_items[1::2]):
-            link = f"{BASE_URL}{item.a.get('href')}"
-            anime_links.append(link)
-            title = item.a.string
-            anime_titles.append(title)
-            rel_date = date.text.strip()
-            anime_counter += 1
-            table.add_row(str(anime_counter), title, rel_date.removeprefix("Released: "))
+    for item,date in zip(search_items[::2], search_items[1::2]):
+        link = f"{BASE_URL}{item.a.get('href')}"
+        anime_links.append(link)
+        title = item.a.string
+        anime_titles.append(title)
+        rel_date = date.text.strip()
+        anime_counter += 1
+        table.add_row(str(anime_counter), title, rel_date.removeprefix("Released: "))
 
     if len(anime_links) > 0:
         print(table)
@@ -125,12 +118,12 @@ def get_res(id_list, ep_start, ep_end):
                         high_res_dict[f"EP.{counter}"] = f"{res_link}"
                     case "Download (1080P-mp4)":
                         extreame_res_dict[f"EP.{counter}"] = f"{res_link}"
-                counter += 1
+        counter += 1
 
     pick_res(low_res_dict, mid_res_dict, high_res_dict, extreame_res_dict, ep_start, ep_end)
 
 def download_file(url, filename, max_retries=5):
-    warnings.filterwarnings("ignore", lineno=0, append=True)
+    warnings.filterwarnings('ignore', category=TqdmExperimentalWarning)
     headers = {
         "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:91.0) Gecko/20100101 Firefox/91.0"
     }
