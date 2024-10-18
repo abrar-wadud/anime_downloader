@@ -152,7 +152,7 @@ def download_file(url, filename, max_retries=5):
             # If total_size is valid, proceed with the download
             m_filename = filename.removeprefix(f"{video_path}/")
             with open(f"{filename}.mp4", 'wb') as f:
-                with tqdm(total=total_size, unit='B', unit_scale=True, desc=f"[orange_red1]{m_filename}.mp4[/orange_red1]", dynamic_ncols=True) as pbar:
+                with tqdm_rich(total=total_size, unit='B', unit_scale=True, desc=f"[orange_red1]{m_filename}.mp4[/orange_red1]", dynamic_ncols=True) as pbar:
                     for chunk in r.iter_content(chunk_size=chunk_size):
                         if chunk:
                             f.write(chunk)
