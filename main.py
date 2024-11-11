@@ -100,7 +100,7 @@ def get_res(id_list, ep_start, ep_end):
             "captcha_v3": f"{CAPTCHA_V3}",
             "id": f"{i}"
         }
-        downloads = requests.post("https://s3taku.com/download", data=data)
+        downloads = requests.post("https://s3embtaku.pro/download", data=data)
         downloads_soup = BeautifulSoup(downloads.content, 'html.parser')
 
         res_list = downloads_soup.find('div', class_='mirror_link').find_all('div', class_='dowload')
