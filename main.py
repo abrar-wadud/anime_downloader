@@ -16,7 +16,6 @@ BASE_URL = "https://anitaku.bz"
 CAPTCHA_V3 = "03AFcWeA5Phyls8xv9gUYojSUiGR6tmA6CHcpFLjGx3WWSh7DZOnYTlP78j0QwLR7lfmGpmYFLgzCExJJnEMFy7jKwZdDFcf7s8Y9UXhaHsUvB95A6qCvTps_qcyPn6oieU2IoTymVwvQYcg7hK66ioEfzuvUlLUfGr8r47nnJzxe-geY6KfElW86yrcnjUVg2ChyJ0ROOYC2wz9K18DeLKqf7yt2w5VsCfLBqoqaIeiFInZ2U508MKsewFtnIRf6DarTfnRPdIa1gCmZwQixgfLIUd-rTaZZLI5Aaa33AnU18r-3x2qfp7MruJ5uB9k1SLgfD9R7pUz7si0UP67V6qPNjhdyS3UKQfoBC26KJbWHLGNZtKFPQw73AzSOqdugWdVjFJ3LQdDQHgqDE6iojJNq82-wBo2g9_sZpzI-9EBDzTYEBC-9UxZE-ZXA6TpxnLCX2YPj4ZKsWXYfMWATXHtmIxBLqpnzRoMHoKuajX8Kw15Sk7c2ih696PLJzeMsLXumVRjHJgambHD-CwOrwZnkDg5rjX8KikrfnFPTIzloFn1EeSdju6EEl4hXQDhWgtlarmKAh_iEvj4GNMBXjj8gXl_-84xSBXHHw3q6YyELh4o6TsS2y4tm3HdjdNWiMZCqMFgiWTdanUC8LFq6bjs8GlxTdmkWBjD46GtsL0TwgHCItF2Kge6lDULiJj2PEnbzMy7QiUWKPZGzpamMDA7iOfE9oA_JguOl-Pi5yQd_PYHGyhL-BWE7UN34cjKoPNERWO_0PxRO42UJj7zR8uUcwSznv9E2kNeiIXogQsIy3oxBckBBtPyDHXi5QQ5klg8oUVzRCD7Rg"
 
 def choosing_anime():
-    global selected_title
     global video_path
     anime_search = Prompt.ask("[cyan]Search[/cyan]")
 
@@ -61,7 +60,7 @@ def max_ep(choosed_anime, anime_title):
 
     episodes = anime_soup.find('ul', id='episode_page').find_all('a')[-1]
     ep_end = episodes.get('ep_end')
-    print(f"[bold]{anime_title} ({ep_end})[/bold]")
+    print(f"[bold][white]{anime_title}[/white] ({ep_end})[/bold]")
     download_id(anime_soup, ep_end)
 
 def download_id(anime_soup, ep_end):
@@ -122,36 +121,26 @@ def get_res(id_list, ep_start, ep_end):
 
     pick_res(low_res_dict, mid_res_dict, high_res_dict, extreame_res_dict, ep_start, ep_end)
 
-def download_file(url, filename, max_retries=5):
+def download_file(url, filename):
     warnings.filterwarnings('ignore', category=TqdmExperimentalWarning)
     headers = {
         "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:91.0) Gecko/20100101 Firefox/91.0"
     }
-
-    retries = 0
-
-    while retries < max_retries:
-        with requests.get(url, headers=headers, stream=True) as r:
-            r.raise_for_status()
-            total_size = int(r.headers.get('Content-Length', 0))
-            chunk_size = 8192
-
-            # If total_size is zero, increment retries and try again
-            if total_size == 0:
-                retries += 1
-                print(f"[yellow bold]Total size is zero. Retrying... ({retries}/{max_retries})[/yellow bold]")
-                continue
-
-            # If total_size is valid, proceed with the download
-            m_filename = filename.removeprefix(f"{video_path}/")
-            with open(f"{filename}.mp4", 'wb') as f:
-                with tqdm_rich(total=total_size, unit='B', unit_scale=True, desc=f"[orange_red1]{m_filename}.mp4[/orange_red1]", dynamic_ncols=True) as pbar:
-                    for chunk in r.iter_content(chunk_size=chunk_size):
-                        if chunk:
-                            f.write(chunk)
-                            pbar.update(len(chunk))
-            print(f"[bright_green bold]Download Completed {m_filename} \n[/bright_green bold]")
-            return
+    with requests.get(url, headers=headers, stream=True) as r:
+        r.raise_for_status()
+        total_size = int(r.headers.get('Content-Length', 0))
+        chunk_size = 8192
+        
+        # If total_size is valid, proceed with the download
+        m_filename = filename.removeprefix(f"{video_path}/")
+        with open(f"{filename}.mp4", 'wb') as f:
+            with tqdm_rich(total=total_size, unit='B', unit_scale=True, desc=f"[orange_red1]{m_filename}.mp4[/orange_red1]", dynamic_ncols=True) as pbar:
+                for chunk in r.iter_content(chunk_size=chunk_size):
+                    if chunk:
+                        f.write(chunk)
+                        pbar.update(len(chunk))
+        print(f"[bright_green bold]Download Completed {m_filename} \n[/bright_green bold]")
+        return
 
     print(f"[red bold]Failed to download {filename} after {max_retries} attempts. Exiting.[/red bold]")
 
