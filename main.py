@@ -121,28 +121,32 @@ def get_res(id_list, ep_start, ep_end):
 
     pick_res(low_res_dict, mid_res_dict, high_res_dict, extreame_res_dict, ep_start, ep_end)
 
-def download_file(url, filename):
+def download_file(url, filename, retries=5, delay=2):
     warnings.filterwarnings('ignore', category=TqdmExperimentalWarning)
     headers = {
         "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:91.0) Gecko/20100101 Firefox/91.0"
     }
-    with requests.get(url, headers=headers, stream=True) as r:
-        r.raise_for_status()
-        total_size = int(r.headers.get('Content-Length', 0))
-        chunk_size = 8192
-        
-        # If total_size is valid, proceed with the download
-        m_filename = filename.removeprefix(f"{video_path}/")
-        with open(f"{filename}.mp4", 'wb') as f:
-            with tqdm_rich(total=total_size, unit='B', unit_scale=True, desc=f"[orange_red1]{m_filename}.mp4[/orange_red1]", dynamic_ncols=True) as pbar:
-                for chunk in r.iter_content(chunk_size=chunk_size):
-                    if chunk:
-                        f.write(chunk)
-                        pbar.update(len(chunk))
-        print(f"[bright_green bold]Download Completed {m_filename} \n[/bright_green bold]")
-        return
 
-    print(f"[red bold]Failed to download {filename} after {max_retries} attempts. Exiting.[/red bold]")
+    for attempt in range(retries):
+        try:
+            with requests.get(url, headers=headers, stream=True) as r:
+                r.raise_for_status()
+                total_size = int(r.headers.get('Content-Length', 0))
+                chunk_size = 8192
+
+                m_filename = filename.removeprefix(f"{video_path}/")
+                with open(f"{filename}.mp4", 'wb') as f:
+                    with tqdm_rich(total=total_size, unit='B', unit_scale=True, desc=f"[orange_red1]{m_filename}.mp4[/orange_red1]", dynamic_ncols=True) as pbar:
+                        for chunk in r.iter_content(chunk_size=chunk_size):
+                            if chunk:
+                                f.write(chunk)
+                                pbar.update(len(chunk))
+            print(f"[bright_green bold]Download Completed {m_filename}[/bright_green bold]")
+            return
+        except requests.RequestException as e:
+            print(f"[red]Error downloading {m_filename}: {e}. Retrying... ({attempt+1}/{retries})[/red]")
+            time.sleep(delay)
+    print(f"[red bold]Failed to download {m_filename} after {retries} attempts[/red bold]")
 
 def pick_res(low_res, mid_res, high_res, extreame_res, ep_start, ep_end):
     ep_range = int(ep_end) - int(ep_start) + 1
